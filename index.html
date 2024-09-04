@@ -1,24 +1,119 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MBSS Clock</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-        }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-    </style>
+  <base target="_top">
+  <style>
+    :root {
+      --bg-color: green;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      font-family: "Trebuchet MS";
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      height: 100vh;
+      background-color: var(--bg-color);
+    }
+    .row {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .a {
+      height: 20vh;
+      font-size: 15vh;
+    }
+    .b {
+      height: 60vh;
+      font-size: 60vh;
+    }
+    .c {
+      height: 20vh;
+      font-size: 10vh;
+    }
+  </style>
 </head>
 <body>
-    <iframe src="https://script.google.com/a/macros/learn.sd23.bc.ca/s/AKfycbz2sbxW4ixT_Eak0HZqC-h8_H3ZURWMePKUHuu7qMh_xNQsyOiyCcE38AGADu6A29gVUQ/exec&output=embed"></iframe>
+  <div class="container" id="bg">
+    <div class="row a" id="rule"></div>
+    <div class="row b" id="time">0:00</div>
+    <div class="row c" id="message"></div>
+  </div>
+  <script>
+    const periods = [
+      { start: "9:00", end: "9:15", message: "9:15" },
+      { start: "10:05", end: "10:20", message: "10:20" },
+      { start: "10:31", end: "10:46", message: "10:46" },
+      { start: "11:35", end: "11:50", message: "11:50" },
+      { start: "12:30", end: "12:45", message: "12:45" },
+      { start: "13:34", end: "13:49", message: "1:49" },
+      { start: "14:00", end: "14:15", message: "2:15" },
+      { start: "15:00", end: "15:15", message: "3:15" }
+    ];
+
+    let currentTime = new Date();
+
+    async function updateTimeFromInternet() {
+      try {
+        const response = await fetch('https://worldtimeapi.org/api/timezone/America/Los_Angeles');
+        const data = await response.json();
+
+        // Extract the current time from the response
+        currentTime = new Date(data.datetime);
+
+      } catch (error) {
+        console.error('Error fetching time:', error);
+      }
+    }
+
+    function updateDisplay(state, message = "") {
+      document.documentElement.style.setProperty('--bg-color', state === 'red' ? 'red' : 'green');
+      document.querySelector("#rule").innerHTML = state === 'red' ? "15 minute rule" : "";
+      document.querySelector("#message").innerHTML = message ? `Remain in class until ${message}` : "";
+    }
+
+    function updateClock() {
+      currentTime.setSeconds(currentTime.getSeconds() + 1);
+      const hh = currentTime.getHours();
+      const mm = currentTime.getMinutes().toString().padStart(2, "0");
+      const time12hr = `${hh > 12 ? hh - 12 : hh}:${mm}`;
+
+      var midnight = new Date(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate(), 0,0,0);
+      var currentMillis = currentTime.getTime() - midnight.getTime();
+      
+      let isRed = false;
+      for (let period of periods) {
+        const [startH, startM] = period.start.split(':').map(Number);
+        const [endH, endM] = period.end.split(':').map(Number);
+        const startMillis = (startH * 60 + startM) * 60000;
+        const endMillis = (endH * 60 + endM) * 60000;
+        //console.log(startMillis);
+        //console.log(endMillis);
+
+        if (currentMillis >= startMillis && currentMillis < endMillis) {
+          updateDisplay('red', period.message);
+          isRed = true;
+          break;
+        }
+      }
+
+      if (!isRed) {
+        updateDisplay('green');
+      }
+
+      document.querySelector("#time").innerHTML = time12hr;
+    }
+
+    setInterval(updateClock, 1000);
+    setInterval(updateTimeFromInternet, 60000);  // Synchronize time every minute
+
+  </script>
 </body>
 </html>

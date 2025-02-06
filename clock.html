@@ -60,6 +60,7 @@
     ];
 
     let currentTime = new Date();
+    let flashInterval = null;
 
     async function updateTimeFromInternet() {
       try {
@@ -73,20 +74,38 @@
       }
     }
 
+    function startFlashing() {
+      const message = document.querySelector("#message");
+      if (!flashInterval) {
+        flashInterval = setInterval(() => {
+          message.innerHTML = (message.innerHTML === "!!!!!") ? "" : "!!!!!";
+        }, 500);
+      }
+    }
+
+    function stopFlashing() {
+      clearInterval(flashInterval);
+      flashInterval = null;
+      document.querySelector("#message").innerHTML = "";
+    }
+
     function updateDisplay(state, message = "", seconds = null) {
       document.documentElement.style.setProperty('--bg-color', state);
 			if (state === 'red') {
 				document.documentElement.style.setProperty('--tx-color', 'white');
 				document.querySelector("#rule").innerHTML = "15 minute rule";
 				document.querySelector("#message").innerHTML = `Remain in class until ${message}`;
+				stopFlashing();
 			} else if (state === 'yellow') {
 				document.documentElement.style.setProperty('--tx-color', 'black');
 				document.querySelector("#rule").innerHTML = "Phone Transition Time";
 				document.querySelector("#message").innerHTML = "";
+				startFlashing();
 			} else { // green
 				document.documentElement.style.setProperty('--tx-color', 'white');
 				document.querySelector("#rule").innerHTML = "";
 				document.querySelector("#message").innerHTML = "";
+				stopFlashing();
 			}
     }
 

@@ -60,7 +60,6 @@
     ];
 
     let currentTime = new Date();
-    let flashInterval = null;
 
     async function updateTimeFromInternet() {
       try {
@@ -74,38 +73,26 @@
       }
     }
 
-    function startFlashing() {
-      const message = document.querySelector("#message");
-      if (!flashInterval) {
-        flashInterval = setInterval(() => {
-          message.innerHTML = (message.innerHTML === "!!!!!") ? "" : "!!!!!";
-        }, 500);
-      }
-    }
-
-    function stopFlashing() {
-      clearInterval(flashInterval);
-      flashInterval = null;
-      document.querySelector("#message").innerHTML = "";
-    }
-
-    function updateDisplay(state, message = "", seconds = null) {
+    function updateDisplay(state, message = "") {
       document.documentElement.style.setProperty('--bg-color', state);
 			if (state === 'red') {
 				document.documentElement.style.setProperty('--tx-color', 'white');
 				document.querySelector("#rule").innerHTML = "15 minute rule";
-				document.querySelector("#message").innerHTML = `Remain in class until ${message}`;
-				stopFlashing();
-			} else if (state === 'yellow') {
+				document.querySelector("#message").innerHTML = message;
+				
+			} else if (state === 'gold') {
 				document.documentElement.style.setProperty('--tx-color', 'black');
-				document.querySelector("#rule").innerHTML = "Phone Transition Time";
-				document.querySelector("#message").innerHTML = "";
-				startFlashing();
+				document.querySelector("#rule").innerHTML = "Transition Time";
+				document.querySelector("#message").innerHTML = message;
+				setTimeout(() => {
+					document.documentElement.style.setProperty('--bg-color', 'green');
+				}, 500);
+				
 			} else { // green
 				document.documentElement.style.setProperty('--tx-color', 'white');
 				document.querySelector("#rule").innerHTML = "";
 				document.querySelector("#message").innerHTML = "";
-				stopFlashing();
+				
 			}
     }
 
@@ -133,29 +120,21 @@
 				if (periodNumber % 2 == 1) {
 					// Start of period
 					if (currentMillis >= startMillis && currentMillis < startMillis + 60000) {
-						updateDisplay('yellow');
+						updateDisplay('gold', "Phones must be put away");
 						isYellow = true;
 						break;
-					} else if (currentMillis >= startMillis && currentMillis < endMillis) {
-						updateDisplay('red', period.message);
-						isRed = true;
-						break;
-					}
+					} 
 				} else {
 					// End of period
 					if (currentMillis >= endMillis - 60000 && currentMillis < endMillis) {
-						updateDisplay('yellow', 'Transition Time');
+						updateDisplay('gold', "Phones may now be used");
 						isYellow = true;
 						break;
-					} else if (currentMillis >= startMillis && currentMillis < endMillis) {
-						updateDisplay('red', period.message);
-						isRed = true;
-						break;
-					}
+					} 
 				}
 				
         if (currentMillis >= startMillis && currentMillis < endMillis) {
-          updateDisplay('red', period.message);
+          updateDisplay('red', `Remain in class until ${period.message}`);
           isRed = true;
           break;
         }

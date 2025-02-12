@@ -119,14 +119,14 @@
 				periodNumber += 1;
 				
 				if (periodNumber % 2 == 1) {
-					// Start of period
-					if (currentMillis >= startMillis && currentMillis < startMillis + 60000) {
+					// Start of period - 2 minute transition time
+					if (currentMillis >= startMillis && currentMillis < startMillis + 120000) {
 						updateDisplay('gold', "PHONES MUST BE PUT AWAY");
 						isYellow = true;
 						break;
 					} 
 				} else {
-					// End of period
+					// End of period - 1 minute transition time
 					if (currentMillis >= endMillis - 60000 && currentMillis < endMillis) {
 						updateDisplay('gold', "Phones may now be used");
 						isYellow = true;

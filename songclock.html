@@ -182,12 +182,12 @@
         let audioAllowed = false;
 
         document.getElementById("startScreen").addEventListener("click", () => {
-            document.getElementById("bell").play().catch(() => { }); // try to unlock audio
             audioAllowed = true;
             document.getElementById("startScreen").style.display = "none";
         });
+
         const songTimes = [
-            { hour: 10, minute: 42, second: 42 },
+            { hour: 10, minute: 48, second: 42 },
             { hour: 11, minute: 49, second: 42 },
             { hour: 13, minute: 48, second: 42 },
             { hour: 15, minute: 14, second: 42 }

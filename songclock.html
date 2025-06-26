@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --bg-color: green;
+      --tx-color: white;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      font-family: "Trebuchet MS";
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      height: 100vh;
+      color: var(--tx-color);
+      background-color: var(--bg-color);
+    }
+
+    .row {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .a {
+      height: 20vh;
+      font-size: 15vh;
+    }
+
+    .b {
+      height: 60vh;
+      font-size: 60vh;
+    }
+
+    .c {
+      height: 20vh;
+      font-size: 10vh;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container" id="bg">
+    <div class="row a" id="rule"></div>
+    <div class="row b" id="time">0:00</div>
+    <div class="row c" id="message"></div>
+  </div>
+  
+  <audio id="song" src="aint_no_stopping_us_now.mp3"></audio>
+
+  <script>
+    const periods = [
+      { start: "9:00", end: "9:15", message: "9:15" },
+      { start: "10:05", end: "10:20", message: "10:20" },
+      { start: "10:31", end: "10:46", message: "10:46" },
+      { start: "11:35", end: "11:50", message: "11:50" },
+      { start: "12:30", end: "12:45", message: "12:45" },
+      { start: "13:34", end: "13:49", message: "1:49" },
+      { start: "14:00", end: "14:15", message: "2:15" },
+      { start: "15:00", end: "15:15", message: "3:15" }
+    ];
+
+    let currentTime = new Date();
+
+    async function updateTimeFromInternet() {
+      try {
+        const response = await fetch('https://worldtimeapi.org/api/timezone/America/Los_Angeles');
+        const data = await response.json();
+
+        currentTime = new Date(data.datetime);
+
+      } catch (error) {
+        console.error('Error fetching time:', error);
+      }
+    }
+
+    function updateDisplay(state, message = "") {
+      document.documentElement.style.setProperty('--bg-color', state);
+      if (state === 'red') {
+        document.documentElement.style.setProperty('--tx-color', 'white');
+        document.querySelector("#rule").innerHTML = "15 minute rule";
+        document.querySelector("#message").innerHTML = message;
+
+      } else if (state === 'gold') {
+        document.documentElement.style.setProperty('--tx-color', 'black');
+        document.querySelector("#rule").innerHTML = "Transition Time";
+        document.querySelector("#message").innerHTML = message;
+        setTimeout(() => {
+          document.documentElement.style.setProperty('--bg-color', 'red');
+          document.documentElement.style.setProperty('--tx-color', 'white');
+        }, 500);
+
+      } else { // green
+        document.documentElement.style.setProperty('--tx-color', 'white');
+        document.querySelector("#rule").innerHTML = "";
+        document.querySelector("#message").innerHTML = "";
+
+      }
+    }
+
+    function updateClock() {
+      currentTime.setSeconds(currentTime.getSeconds() + 1);
+      const hh = currentTime.getHours();
+      const mm = currentTime.getMinutes().toString().padStart(2, "0");
+      const time12hr = `${hh > 12 ? hh - 12 : hh}:${mm}`;
+
+      var midnight = new Date(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate(), 0, 0, 0);
+      var currentMillis = currentTime.getTime() - midnight.getTime();
+
+      let isRed = false;
+      let isYellow = false;
+      let periodNumber = 0;
+
+      for (let period of periods) {
+        const [startH, startM] = period.start.split(':').map(Number);
+        const [endH, endM] = period.end.split(':').map(Number);
+        const startMillis = (startH * 60 + startM) * 60000;
+        const endMillis = (endH * 60 + endM) * 60000;
+
+        periodNumber += 1;
+
+        if (periodNumber % 2 == 1) {
+          // Start of period - 2 minute transition time
+          if (currentMillis >= startMillis && currentMillis < startMillis + 120000) {
+            updateDisplay('gold', "PHONES MUST BE PUT AWAY");
+            isYellow = true;
+            break;
+          }
+        } else {
+          // End of period - 1 minute transition time
+          if (currentMillis >= endMillis - 60000 && currentMillis < endMillis) {
+            updateDisplay('gold', "Phones may now be used");
+            isYellow = true;
+            break;
+          }
+        }
+
+        if (currentMillis >= startMillis && currentMillis < endMillis) {
+          updateDisplay('red', `Remain in class until ${period.message}`);
+          isRed = true;
+          break;
+        }
+      }
+
+      if (!isRed && !isYellow) {
+        updateDisplay('green');
+      }
+
+      checkAndPlaySong();
+
+      document.querySelector("#time").innerHTML = time12hr;
+    }
+    
+    const songTimes = [
+      { hour: 10, minute: 19, second: 42 },
+      { hour: 11, minute: 49, second: 42 },
+      { hour: 13, minute: 48, second: 42 },
+      { hour: 15, minute: 14, second: 42 }
+    ];
+
+    let lastSongCheck = null;
+
+    function checkAndPlaySong() {
+      const now = currentTime;
+      const currentKey = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+      for (const { hour, minute, second } of songTimes) {
+        const targetKey = hour * 3600 + minute * 60 + second;
+
+        if (currentKey === targetKey && lastSongCheck !== targetKey) {
+          document.getElementById("song").play();
+          lastSongCheck = targetKey;
+        }
+      }
+    }
+
+    setInterval(updateClock, 1000);
+    setInterval(updateTimeFromInternet, 60000);  // Synchronize time every minute
+
+    updateTimeFromInternet();
+  </script>
+</body>
+
+</html>

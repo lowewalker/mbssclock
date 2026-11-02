@@ -76,27 +76,22 @@
         );
     
         if (!response.ok) {
-          throw new Error(`Time service returned ${response.status}`);
+          throw new Error(`HTTP ${response.status}`);
         }
     
         const data = await response.json();
     
-        // Use the server's UTC timestamp, not its local time-zone rules.
-        const serverTime = Date.parse(data.datetime);
-    
-        if (!Number.isFinite(serverTime)) {
-          throw new Error("Invalid time received from server");
+        if (!Number.isFinite(data.unixtime)) {
+          throw new Error("Missing or invalid Unix timestamp");
         }
     
-        const requestEnd = performance.now();
+        syncedEpochMs = data.unixtime * 1000;
+        syncPerformanceMs =
+          (requestStart + performance.now()) / 2;
     
-        // Approximate the time at the midpoint of the request.
-        syncedEpochMs = serverTime;
-        syncPerformanceMs = (requestStart + requestEnd) / 2;
-    
+        console.log("Internet time synchronized:", data);
       } catch (error) {
-        console.error("Time synchronization failed:", error);
-        // Preserve the previous synchronization if one exists.
+        console.error("Time sync failed:", error);
       } finally {
         syncing = false;
       }
@@ -104,16 +99,14 @@
     
     function getCurrentPacificTime() {
       if (syncedEpochMs === null) {
-        // Temporary fallback until the first successful sync.
-        return new Date(utcMs - 7 * 60 * 60 * 1000);
+        return null;
       }
     
-      // performance.now() advances independently of Windows system-clock changes.
-      const elapsed = performance.now() - syncPerformanceMs;
-      const utcMs = syncedEpochMs + elapsed;
+      const utcMs =
+        syncedEpochMs + (performance.now() - syncPerformanceMs);
     
-      // BC Pacific Time: fixed UTC-7, all year.
-      return new Date(utcMs + 7 * 60 * 60 * 1000);
+      // UTC-7, expressed as UTC components to avoid Windows' time zone.
+      return new Date(utcMs - 7 * 60 * 60 * 1000);
     }
     
     function updateDisplay(state, message = "") {

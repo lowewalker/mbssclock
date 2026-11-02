@@ -58,72 +58,127 @@
       { start: "15:15", end: "15:30", message: "3:30" }
     ];
     
-    let timeOffset = 0;
+    // Internet-synchronized time, tracked independently of the system clock.
+    let syncedEpochMs = null;
+    let syncPerformanceMs = null;
+    let syncing = false;
     
     async function updateTimeFromInternet() {
+      if (syncing) return;
+      syncing = true;
+    
+      const requestStart = performance.now();
+    
       try {
         const response = await fetch(
-          'https://worldtimeapi.org/api/timezone/America/Vancouver'
+          "https://worldtime.timezone.io/api/timezone/Etc/UTC",
+          { cache: "no-store" }
         );
+    
+        if (!response.ok) {
+          throw new Error(`Time service returned ${response.status}`);
+        }
+    
         const data = await response.json();
     
-        timeOffset = new Date(data.datetime).getTime() - Date.now();
+        // Use the server's UTC timestamp, not its local time-zone rules.
+        const serverTime = Date.parse(data.datetime);
     
-      } catch(error) {
-        console.error(error);
+        if (!Number.isFinite(serverTime)) {
+          throw new Error("Invalid time received from server");
+        }
+    
+        const requestEnd = performance.now();
+    
+        // Approximate the time at the midpoint of the request.
+        syncedEpochMs = serverTime;
+        syncPerformanceMs = (requestStart + requestEnd) / 2;
+    
+      } catch (error) {
+        console.error("Time synchronization failed:", error);
+        // Preserve the previous synchronization if one exists.
+      } finally {
+        syncing = false;
       }
     }
-
-    function updateDisplay(state, message = "") {
-      document.documentElement.style.setProperty('--bg-color', state === 'red' ? 'red' : 'green');
-      document.querySelector("#rule").innerHTML = state === 'red' ? "15 minute rule" : "";
-      document.querySelector("#message").innerHTML = message ? `Remain in class until ${message}` : "";
+    
+    function getCurrentPacificTime() {
+      if (syncedEpochMs === null) {
+        // Temporary fallback until the first successful sync.
+        return new Date(Date.now() + 7 * 60 * 60 * 1000);
+      }
+    
+      // performance.now() advances independently of Windows system-clock changes.
+      const elapsed = performance.now() - syncPerformanceMs;
+      const utcMs = syncedEpochMs + elapsed;
+    
+      // BC Pacific Time: fixed UTC-7, all year.
+      return new Date(utcMs + 7 * 60 * 60 * 1000);
     }
-
+    
+    function updateDisplay(state, message = "") {
+      document.documentElement.style.setProperty(
+        "--bg-color",
+        state === "red" ? "red" : "green"
+      );
+    
+      document.querySelector("#rule").innerHTML =
+        state === "red" ? "15 minute rule" : "";
+    
+      document.querySelector("#message").innerHTML =
+        message ? `Remain in class until ${message}` : "";
+    }
+    
     function updateClock() {
-      const currentTime = new Date(Date.now() + timeOffset);
-      const hh = currentTime.getHours();
-      const mm = currentTime.getMinutes().toString().padStart(2, "0");
-      const time12hr = `${hh > 12 ? hh - 12 : hh}:${mm}`;
-
-      var midnight = new Date(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate(), 0,0,0);
-      var currentMillis = currentTime.getTime() - midnight.getTime();
-      
+      const currentTime = getCurrentPacificTime();
+    
+      const hh = currentTime.getUTCHours();
+      const mm = currentTime.getUTCMinutes();
+      const time12hr = `${hh % 12 || 12}:${String(mm).padStart(2, "0")}`;
+    
+      const currentMillis =
+        ((hh * 60 + mm) * 60 + currentTime.getUTCSeconds()) * 1000 +
+        currentTime.getUTCMilliseconds();
+    
       let isRed = false;
-      for (let period of periods) {
-        const [startH, startM] = period.start.split(':').map(Number);
-        const [endH, endM] = period.end.split(':').map(Number);
+    
+      for (const period of periods) {
+        const [startH, startM] = period.start.split(":").map(Number);
+        const [endH, endM] = period.end.split(":").map(Number);
+    
         const startMillis = (startH * 60 + startM) * 60000;
         const endMillis = (endH * 60 + endM) * 60000;
-        //console.log(startMillis);
-        //console.log(endMillis);
-
+    
         if (currentMillis >= startMillis && currentMillis < endMillis) {
-          updateDisplay('red', period.message);
+          updateDisplay("red", period.message);
           isRed = true;
           break;
         }
       }
-
+    
       if (!isRed) {
-        updateDisplay('green');
+        updateDisplay("green");
       }
-
-      document.querySelector("#time").innerHTML = time12hr;
+    
+      document.querySelector("#time").textContent = time12hr;
     }
-
+    
+    // Update the display every second; synchronize every five minutes.
+    setInterval(updateClock, 1000);
+    setInterval(updateTimeFromInternet, 300000);
+    
+    // Synchronize immediately on startup.
+    updateTimeFromInternet();
+    updateClock();
+    
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
         updateTimeFromInternet();
       }
     });
-
+    
     window.addEventListener("focus", updateTimeFromInternet);
 
-    setInterval(updateClock, 1000);
-    setInterval(updateTimeFromInternet, 300000);  // Synchronize time every 5 minutes
-
-    updateTimeFromInternet();
   </script>
 </body>
 </html>

@@ -123,7 +123,13 @@
     }
     
     function updateClock() {
+      function updateClock() {
       const currentTime = getCurrentPacificTime();
+    
+      if (currentTime === null) {
+        document.querySelector("#time").textContent = "--:--";
+        return;
+      }
     
       const hh = currentTime.getUTCHours();
       const mm = currentTime.getUTCMinutes();

@@ -122,38 +122,44 @@
         message ? `Remain in class until ${message}` : "";
     }
     
-    function updateClock() {
-      function updateClock() {
-      const currentTime = getCurrentPacificTime();
-    
-      if (currentTime === null) {
-        document.querySelector("#time").textContent = "--:--";
-        return;
-      }
-    
-      const hh = currentTime.getUTCHours();
-      const mm = currentTime.getUTCMinutes();
-      const time12hr = `${hh % 12 || 12}:${String(mm).padStart(2, "0")}`;
-    
-      const currentMillis =
-        ((hh * 60 + mm) * 60 + currentTime.getUTCSeconds()) * 1000 +
-        currentTime.getUTCMilliseconds();
-    
-      let isRed = false;
-    
-      for (const period of periods) {
-        const [startH, startM] = period.start.split(":").map(Number);
-        const [endH, endM] = period.end.split(":").map(Number);
-    
-        const startMillis = (startH * 60 + startM) * 60000;
-        const endMillis = (endH * 60 + endM) * 60000;
-    
-        if (currentMillis >= startMillis && currentMillis < endMillis) {
-          updateDisplay("red", period.message);
-          isRed = true;
-          break;
-        }
-      }
+   function updateClock() {
+  const currentTime = getCurrentPacificTime();
+
+  if (currentTime === null) {
+    document.querySelector("#time").textContent = "--:--";
+    return;
+  }
+
+  const hh = currentTime.getUTCHours();
+  const mm = currentTime.getUTCMinutes();
+  const time12hr = `${hh % 12 || 12}:${String(mm).padStart(2, "0")}`;
+
+  const currentMillis =
+    ((hh * 60 + mm) * 60 + currentTime.getUTCSeconds()) * 1000 +
+    currentTime.getUTCMilliseconds();
+
+  let isRed = false;
+
+  for (const period of periods) {
+    const [startH, startM] = period.start.split(":").map(Number);
+    const [endH, endM] = period.end.split(":").map(Number);
+
+    const startMillis = (startH * 60 + startM) * 60000;
+    const endMillis = (endH * 60 + endM) * 60000;
+
+    if (currentMillis >= startMillis && currentMillis < endMillis) {
+      updateDisplay("red", period.message);
+      isRed = true;
+      break;
+    }
+  }
+
+  if (!isRed) {
+    updateDisplay("green");
+  }
+
+  document.querySelector("#time").textContent = time12hr;
+}
     
       if (!isRed) {
         updateDisplay("green");
